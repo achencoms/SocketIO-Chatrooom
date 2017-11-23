@@ -1,10 +1,26 @@
-<html>
-  <head>
-    <meta charset="utf-8">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+{% extends "base.html" %}
+{% block head %}
     <title>User Information</title>
-  </head>
-  <body>
+    <script>
+    $(document).ready(function(){
+        $("input[name='user']").on("input",function(){
+          $.ajax({
+            type: "GET",
+            url: "/checkName",
+            data : {"name" : $(this).val()},
+            success: function(d){
+              d = JSON.parse(d);
+              if(d['check'] == true){
+                $("p").fadeIn();
+              }
+              else $("p").fadeOut();
+            }
+          });
+        });
+    });
+    </script>
+{% endblock %}
+{% block content %}
     <div class="container h-100 d-flex justify-content-center">
       <div class="container my-auto">
         <div class="jumbotron form-control form-control-lg bg-white">
@@ -12,9 +28,8 @@
             <input type="text" placeholder="username" name="user">
             <input class="btn btn-primary" type="submit" value="Enter">
           </form>
-          </form>
+          <p style="display:none; text-align:center;">The name is currently taken.</p>
         </div>
       </div>
     </div>
-  </body>
-</html>
+{% endblock %}

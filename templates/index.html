@@ -1,42 +1,58 @@
-<html>
-<head>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+{% extends "base.html" %}
+{% block head %}
   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
   <script type="text/javascript" charset="utf-8">
-      var socket = io.connect('http://' + document.domain + ':' + location.port + location.pathname);
+    var socket = io.connect('http://' + document.domain + ':' + location.port + location.pathname);
       socket.on('connect', function() {
           //socket.emit('my event', {data: 'I\'m connected!'});
       });
       var activeChat = "general";
 
+      function changeActive(){
+        $(".chat").each(function(){
+          var boxID = $(this).attr("id");
+          if(boxID == activeChat){
+            $(this).show();
+          }
+          else $(this).hide();
+        });
+      }
+
       $(document).ready(function(){
-        $("nav").on("click","a",function(e){ //instead of click, because I need to modify dynamically added elements
+        $("nav").on("click","a.nav-link",function(e){ //instead of click, because I need to modify dynamically added elements
           e.preventDefault();
+          //Choose the active tab
           activeChat = $(this).text();
+          $("nav a.nav-link").removeClass("active");
           if(!$(this).hasClass("active")){
-            $("nav a").removeClass("active");
             $(this).addClass("active");
           }
           //Make sure that the correct chatbox is visible for user
-          $(".chat").each(function(){
-            var boxID = $(this).attr("id");
-            if(boxID == activeChat){
-              $(this).show();
-            }
-            else $(this).hide();
-          });
+          changeActive();
         });
-        $("#message").submit(function(event){
-          event.preventDefault();
+        $("nav").on("click","a.l",function(e){
+          e.preventDefault();
+          var chatName = $(this).prev().text();
+          var group = $(this).parent();
+          if(activeChat == chatName){
+            activeChat = group.prev().find("a.nav-link").text();
+            $("#" + activeChat).show();
+          }
+          $("#" + chatName).remove();
+          group.remove();
+          socket.emit('leave', {'room' : chatName});
+        });
+        $("#message").submit(function(e){
+          e.preventDefault();
           if($("#m").val()){
-            socket.send($(this).find("#m").val());
+            socket.emit('message', {'m' : $(this).find("#m").val(), 'room' : activeChat});
             $("#m").val("");
           }
         });
-        $("#join_room").submit(function(event){
-          event.preventDefault();
+        $("#join_room").submit(function(e){
+          e.preventDefault();
           if($("#room").val()){
+            activeChat = $("#room").val();
             socket.emit('join', {"room" : $(this).find("#room").val()});
             $("#room").val("");
           }
@@ -44,33 +60,47 @@
       });
       socket.on('userMessage', function(message) {
           $("#" + activeChat).append("<p>"+ message['user'] + ": " + message['m'] + "</p>");
-          $("#" + activeChat).scrollTop($("#display")[0].scrollHeight);
+          $("#" + activeChat).scrollTop($("#" + activeChat)[0].scrollHeight);
       });
       socket.on('message', function(message) {
-          $("#" + activeChat).append("<p>"+ message + "</p>");
-          $("#" + activeChat).scrollTop($("#display")[0].scrollHeight);
+          $("#" + message['room']).append("<p>"+ message['m'] + "</p>");
+          $("#" + message['room']).scrollTop($("#" + message['room'])[0].scrollHeight);
       });
       socket.on('room_check', function(data) {
           var rooms = data['rooms'];
           $.each(rooms,function(index,value){
-            if(!$("nav a #" + value).length){
-              var newLink = $('<a class="nav-link" href="#">' + value + '</a>'); // new link added
+            if(!$("#" + value).length){
+              var newGroup = $('<div class="btn-group" style="width:100%;"></div>');
+              var newLink = $('<a class="btn nav-link btn-block active" href="#">' + value + '</a>'); // new link added
+              var newXLink = $('<a class="btn btn-secondary l" href="#">X</a>');
+              newGroup.append(newLink);
+              newGroup.append(newXLink);
               var newChat = $('<div class="container form-control chat mx-auto" id ="' + value + '" style="height:50%; display:none; overflow-y:scroll"></div>');
-              $("nav").append(newLink);
+              $("nav").append(newGroup);
               $("#chatboxes").append(newChat);
               return false;
             }
           });
+          $("nav a.nav-link").removeClass("active");
+          $("nav a.nav-link").each(function(){
+            if($(this).text() == activeChat){
+              $(this).addClass("active");
+              return false;
+            }
+          });
+          changeActive();
       });
   </script>
-</head>
-  <body>
+{% endblock %}
+{% block content %}
   <div class="row">
     <!--Side Navbar-->
     <div class="col-md-2">
-      <nav class="nav nav-pills flex-column">
-        <a class="nav-link active" href="#">general</a>
-        <a class="nav-link" href="#">display2</a>
+      <nav class="nav nav-pills">
+        <div class="btn-group" style="width:100%;">
+          <a class="btn nav-link btn-block active" href="#">general</a>
+          <a class="btn btn-secondary l" href="#">X</a>
+        </div>
       </nav>
     </div>
 
@@ -107,5 +137,4 @@
       </div>
     </div>
   </div>
-  </body>
-</html>
+{% endblock %}
