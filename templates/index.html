@@ -8,6 +8,10 @@
       });
       var activeChat = "general";
 
+      function escText(text){
+        return text.replace(/[!"#$%&'()*+,.\/:;<=>?@[\\\]^`{|}~]/g, "\\\\$&");
+      }
+
       function changeActive(){
         $(".chat").each(function(){
           var boxID = $(this).attr("id");
@@ -36,9 +40,10 @@
           var group = $(this).parent();
           if(activeChat == chatName){
             activeChat = group.prev().find("a.nav-link").text();
-            $("#" + activeChat).show();
+            $("[id='" + activeChat + "']").show();
+            $(".nav-link:contains('" + activeChat + "')").addClass("active");
           }
-          $("#" + chatName).remove();
+          $("[id='" + chatName + "']").remove();
           group.remove();
           socket.emit('leave', {'room' : chatName});
         });
@@ -59,19 +64,28 @@
         });
       });
       socket.on('userMessage', function(message) {
-          $("#" + activeChat).append("<p>"+ message['user'] + ": " + message['m'] + "</p>");
-          $("#" + activeChat).scrollTop($("#" + activeChat)[0].scrollHeight);
+          var room = activeChat;
+          $("[id='" + room + "']").append("<p>"+ message['user'] + ": " + message['m'] + "</p>");
+          $("[id='" + room + "']").scrollTop($("[id='" + room + "']")[0].scrollHeight);
       });
       socket.on('message', function(message) {
-          $("#" + message['room']).append("<p>"+ message['m'] + "</p>");
-          $("#" + message['room']).scrollTop($("#" + message['room'])[0].scrollHeight);
+          var room = message['room'];
+          $("[id='" + room + "']").append("<p>"+ message['m'] + "</p>");
+          $("[id='" + room + "']").scrollTop($("[id='" + room + "']")[0].scrollHeight);
+      });
+      //Edit needed
+      socket.on('users_online', function(data) {
+        var users = data['users'];
+          $("[id='" + room + "']").append("<p>"+ message['m'] + "</p>");
+          $("[id='" + room + "']").scrollTop($("[id='" + room + "']")[0].scrollHeight);
       });
       socket.on('room_check', function(data) {
           var rooms = data['rooms'];
+          console.log(activeChat);
           $.each(rooms,function(index,value){
-            if(!$("#" + value).length){
+            if(!$("[id='" + value + "']").length){
               var newGroup = $('<div class="btn-group" style="width:100%;"></div>');
-              var newLink = $('<a class="btn nav-link btn-block active" href="#">' + value + '</a>'); // new link added
+              var newLink = $('<a class="btn nav-link btn-block active" style="overflow:hidden;" href="#">' + value + '</a>'); // new link added
               var newXLink = $('<a class="btn btn-secondary l" href="#">X</a>');
               newGroup.append(newLink);
               newGroup.append(newXLink);
@@ -96,7 +110,8 @@
   <div class="row">
     <!--Side Navbar-->
     <div class="col-md-2">
-      <nav class="nav nav-pills">
+      <nav class="nav nav-pills ml-2">
+        <h3 class="nav-link text-center btn-block" style="border-bottom: 1px solid black">Current Rooms</h3>
         <div class="btn-group" style="width:100%;">
           <a class="btn nav-link btn-block active" href="#">general</a>
           <a class="btn btn-secondary l" href="#">X</a>
@@ -107,7 +122,7 @@
 
     <div class="col-md-8">
       <div class= "container">
-        <h1 class="display-1"><b>ChatwithMatt</b></h1>
+        <h1 class="display-1 text-center bg-primary rounded mt-1 text-white"><b>ChatwithMatt</b></h1>
         <div id="chatboxes">
           <div class="container form-control chat mx-auto" id ="general" style="height:50%; overflow-y:scroll"></div>
           <div class="container form-control chat" id ="display2" style="height:50%; display:none; overflow-y:scroll;"></div>
@@ -136,5 +151,18 @@
 
       </div>
     </div>
+
+    <div class="col-md-2">
+      <nav class="nav nav-pills mr-2">
+        <h3 class="nav-link text-center btn-block" style="border-bottom: 1px solid black">Users Online</h3>
+        <div class="btn-group" style="width:100%;">
+          <a class="btn nav-link btn-block active" href="#">Raymond Wong</a>
+          <a class="messageUser btn btn-secondary">
+            <i class="fa fa-commenting" style="font-size:26px" aria-hidden="true"></i>
+          </a>
+        </div>
+      </nav>
+    </div>
+
   </div>
 {% endblock %}

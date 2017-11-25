@@ -6,7 +6,7 @@ import os, json
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(32);
 socketio = SocketIO(app)
-users = []
+users = {}
 
 @app.route('/')
 def home():
@@ -21,7 +21,7 @@ def index():
     if 'user' in session:
         return redirect(url_for("chat"))
     if user not in users:
-        users.append(user)
+        users[user] = ""
         session['user'] = user
         return redirect(url_for("chat"))
     return redirect(url_for("home"))
@@ -45,27 +45,30 @@ def handle_message(message):
 
 @socketio.on('connect', namespace="/chatroom")
 def test_connect():
-    print ("client has connected\n\n")
+    users[session['user']] = request.sid
+    emit("users_online", {'users' : users.keys()})
     join_room("general")
 
 @socketio.on('join', namespace="/chatroom")
 def on_join(data):
     room = data['room']
-    if(room not in rooms()):
+    if room not in rooms():
         join_room(room)
         roomList = [room for room in rooms() if room != request.sid]
+        print(roomList)
         emit("room_check", {
             "rooms" : roomList
         })
-        send("Your current rooms are: " + str(roomList))
-        emit("message", {'m': session['user'] + " has joined " + room + ".", 'room' : room}, room = room)
+        #send("Your current rooms are: " + str(roomList))
+        emit("message", {'m': session['user'] + " has joined <b>" + room + "</b>.", 'room' : room}, room = room)
 
-@socketio.on('leave')
+@socketio.on('leave', namespace="/chatroom")
 def on_leave(data):
     username = session['user']
     room = data['room']
     leave_room(room)
-    send(username + ' has left the room.', room=room)
+    print(rooms())
+    emit("message",{'m' : username + 'has left the room.', 'room' : room},room = room)
 
 '''
 @socketio.on('my broadcast event')
