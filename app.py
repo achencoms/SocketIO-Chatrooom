@@ -46,12 +46,13 @@ def handle_message(message):
 @socketio.on('connect', namespace="/chatroom")
 def test_connect():
     users[session['user']] = request.sid
-    emit("users_online", {'users' : users.keys()})
     join_room("general")
+    emit("users_online", {'users' : list(users.keys())})
 
 @socketio.on('join', namespace="/chatroom")
 def on_join(data):
     room = data['room']
+    print(room)
     if room not in rooms():
         join_room(room)
         roomList = [room for room in rooms() if room != request.sid]
