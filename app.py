@@ -1,5 +1,5 @@
 from flask import Flask, render_template, session, redirect, url_for, request
-from flask_socketio import SocketIO, send, emit, join_room, leave_room, rooms
+from flask_socketio import SocketIO, send, emit, join_room, leave_room, rooms, disconnect
 
 import os, json
 
@@ -32,6 +32,12 @@ def chat():
         return redirect(url_for("home"))
     return render_template('index.html')
 
+@app.route('/disconnect')
+def disconnect():
+    users.pop(session['user'],None)
+    session.pop('user',None)
+    return redirect(url_for("home"))
+
 @app.route("/checkName", methods=["GET"])
 def checkName():
     d = request.args
@@ -43,20 +49,24 @@ def checkName():
 def handle_message(message):
     emit('userMessage',{'m' : message['m'], 'user' : session['user']}, room=message['room'])
 
+@socketio.on('chatUser', namespace="/chatroom")
+def chatWith(data):
+    join_room(data['user'])
+
 @socketio.on('connect', namespace="/chatroom")
 def test_connect():
     users[session['user']] = request.sid
     join_room("general")
-    emit("users_online", {'users' : list(users.keys())})
+    for name,sid in users.items():
+        userDict = dict([(n,s) for n,s in users.items() if n != name])
+        emit("users_online", {'users' : userDict}, room = sid)
 
 @socketio.on('join', namespace="/chatroom")
 def on_join(data):
     room = data['room']
-    print(room)
     if room not in rooms():
         join_room(room)
         roomList = [room for room in rooms() if room != request.sid]
-        print(roomList)
         emit("room_check", {
             "rooms" : roomList
         })
@@ -68,17 +78,20 @@ def on_leave(data):
     username = session['user']
     room = data['room']
     leave_room(room)
-    print(rooms())
     emit("message",{'m' : username + 'has left the room.', 'room' : room},room = room)
+
+@socketio.on('disconnect', namespace="/chatroom")
+def on_disconnect():
+    disconnect()
+    for name,sid in users.items():
+        userDict = dict([(n,s) for n,s in users.items() if n != name])
+        emit("users_online", {'users' : userDict}, room = sid)
 
 '''
 @socketio.on('my broadcast event')
 def test_message(message):
     emit('my response', {'data': message['data']}, broadcast=True)
 
-@socketio.on('disconnect')
-def test_disconnect():
-    print('Client disconnected')
 '''
 if __name__ == '__main__':
     app.debug = True

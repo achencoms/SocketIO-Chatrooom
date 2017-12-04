@@ -27,7 +27,7 @@
           e.preventDefault();
           //Choose the active tab
           activeChat = $(this).text();
-          $(".rooms a.nav-link").removeClass("active");
+          $("nav .nav-link").removeClass("active");
           if(!$(this).hasClass("active")){
             $(this).addClass("active");
           }
@@ -47,6 +47,18 @@
           group.remove();
           socket.emit('leave', {'room' : chatName});
         });
+        //Message buttons
+        $(".users").on("click","a.m",function(e){
+          e.preventDefault();
+          var user = $(this).prev();
+          $(".nav-link").removeClass("active");
+          if(!user.hasClass("active")){
+            user.addClass("active");
+          }
+          activeChat = user.attr('id');
+          changeActive();
+          socket.emit('chatUser', {'user' : user.attr('id')});
+        });
         $("#message").submit(function(e){
           e.preventDefault();
           if($("#m").val()){
@@ -62,45 +74,55 @@
             $("#room").val("");
           }
         });
+        $("#disconnect").click(function(e){
+          socket.disconnect();
+        });
       });
       socket.on('userMessage', function(message) {
           var room = activeChat;
-          $("[id='" + room + "']").append("<p>"+ message['user'] + ": " + message['m'] + "</p>");
-          $("[id='" + room + "']").scrollTop($("[id='" + room + "']")[0].scrollHeight);
+          $(".chat[id='" + room + "']").append("<p>"+ message['user'] + ": " + message['m'] + "</p>");
+          $(".chat[id='" + room + "']").scrollTop($("[id='" + room + "']")[0].scrollHeight);
       });
       socket.on('message', function(message) {
           var room = message['room'];
-          $("[id='" + room + "']").append("<p>"+ message['m'] + "</p>");
-          $("[id='" + room + "']").scrollTop($("[id='" + room + "']")[0].scrollHeight);
+          $(".chat[id='" + room + "']").append("<p>"+ message['m'] + "</p>");
+          $(".chat[id='" + room + "']").scrollTop($("[id='" + room + "']")[0].scrollHeight);
       });
       socket.on('users_online', function(data) {
           var users = data['users'];
-          $.each(users,function(index,value){
+          $('.users div').remove();
+          $('.user').remove();
+          //Refresh users online, unlike the rooms, everyone should have the same users list
+          $.each(users,function(key,value){
+            //new tab for users
+            //id should be set to the user's request.sid
             var newGroup = $('<div class="btn-group" style="width:100%;"></div>');
-            var newLink = $('<a class="btn nav-link btn-block active" href="#">' + value + '</a>');
-            var newMessageIcon = $('<a class="messageUser btn btn-secondary"><i class="fa fa-commenting" style="font-size:26px" aria-hidden="true"></i></a>');
+            var newLink = $('<div class="btn nav-link btn-block" id="' + value +  '"href="#">' + key + '</div>');
+            var newMessageIcon = $('<a href="#" class="m btn btn-secondary"><i class="fa fa-commenting" style="font-size:26px" aria-hidden="true"></i></a>');
             newGroup.append(newLink);
             newGroup.append(newMessageIcon);
             $(".users").append(newGroup);
+            //new chatbox for each user
+            var newChat = $('<div class="container form-control chat mx-auto user" id ="' + value + '" style="height:50%; display:none; overflow-y:scroll"></div>');
+            $('#chatboxes').append(newChat);
           });
       });
       socket.on('room_check', function(data) {
           var rooms = data['rooms'];
-          console.log(activeChat);
           $.each(rooms,function(index,value){
             if(!$("[id='" + value + "']").length){
               var newGroup = $('<div class="btn-group" style="width:100%;"></div>');
               var newLink = $('<a class="btn nav-link btn-block active" style="overflow:hidden;" href="#">' + value + '</a>'); // new link added
               var newXLink = $('<a class="btn btn-secondary l" href="#">X</a>');
+              var newChat = $('<div class="container form-control chat mx-auto" id ="' + value + '" style="height:50%; display:none; overflow-y:scroll"></div>');
               newGroup.append(newLink);
               newGroup.append(newXLink);
-              var newChat = $('<div class="container form-control chat mx-auto" id ="' + value + '" style="height:50%; display:none; overflow-y:scroll"></div>');
               $(".rooms").append(newGroup);
               $("#chatboxes").append(newChat);
               return false;
             }
           });
-          $(".rooms a.nav-link").removeClass("active");
+          $(".nav-link").removeClass("active");
           $(".rooms a.nav-link").each(function(){
             if($(this).text() == activeChat){
               $(this).addClass("active");
@@ -134,14 +156,19 @@
         </div>
 
         <div class="row">
-          <div class="col-md-4">
-            <form class="input-group my-1" id="join_room">
+          <div class="col-md-4 my-4 mx-auto">
+            <form class="input-group" id="join_room">
                 <span class="input-group-addon">Room</span>
                 <input class="form-control" type="text" id="room" autofocus="autofocus" placeholder="Room Name">
                 <span class="input-group-btn">
                   <button type="submit" class="btn btn-outline-primary" id="join_room">Join</button>
                 </span>
             </form>
+          </div>
+        </div>
+        <div class ="row">
+          <div class ="col-md-4 my-1 text-center mx-auto">
+            <a href="/disconnect" class="btn btn-danger btn-lg" id="disconnect">Disconnect</a>
           </div>
         </div>
 
@@ -158,11 +185,10 @@
     </div>
 
     <div class="col-md-2">
-      <nav class="nav nav-pills mr-2 users">
+      <nav class="nav nav-pills mr-1 users">
         <h3 class="nav-link text-center btn-block" style="border-bottom: 1px solid black">Users Online</h3>
         <div class="btn-group" style="width:100%;">
-          <a class="btn nav-link btn-block active" href="#">Raymond Wong</a>
-          <a class="messageUser btn btn-secondary"><i class="fa fa-commenting" style="font-size:26px" aria-hidden="true"></i></a>
+          <a class="btn btn-secondary m"><i class="fa fa-commenting" style="font-size:26px" aria-hidden="true"></i></a>
         </div>
       </nav>
     </div>
