@@ -80,8 +80,16 @@
       });
       socket.on('userMessage', function(message) {
           var room = activeChat;
-          $(".chat[id='" + room + "']").append("<p>"+ message['user'] + ": " + message['m'] + "</p>");
-          $(".chat[id='" + room + "']").scrollTop($("[id='" + room + "']")[0].scrollHeight);
+          if(message['sid']){
+            console.log(message['sid']);
+            console.log(activeChat);
+            $(".user[id='" + message['sid'] + "']").append("<p>"+ message['user'] + ": " + message['m'] + "</p>");
+            $(".user[id='" + message['sid'] + "']").scrollTop($("[id='" + message['sid'] + "']")[0].scrollHeight);
+          }
+          else{
+            $(".chat[id='" + room + "']").append("<p>"+ message['user'] + ": " + message['m'] + "</p>");
+            $(".chat[id='" + room + "']").scrollTop($("[id='" + room + "']")[0].scrollHeight);
+          }
       });
       socket.on('message', function(message) {
           var room = message['room'];

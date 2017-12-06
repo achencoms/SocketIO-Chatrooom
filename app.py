@@ -47,7 +47,10 @@ def checkName():
 
 @socketio.on('message', namespace="/chatroom")
 def handle_message(message):
-    emit('userMessage',{'m' : message['m'], 'user' : session['user']}, room=message['room'])
+    if message['room'] in users.values():
+        emit('userMessage',{'m' : message['m'], 'user' : session['user'], 'sid' : request.sid}, room=message['room'])
+    else:
+        emit('userMessage',{'m' : message['m'], 'user' : session['user']}, room=message['room'])
 
 @socketio.on('chatUser', namespace="/chatroom")
 def chatWith(data):
